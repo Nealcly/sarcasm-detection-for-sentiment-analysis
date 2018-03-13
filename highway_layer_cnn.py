@@ -4,8 +4,7 @@ import numpy as np
 
 class hightway_CNN(object):
     """
-    A CNN for text classification.
-    Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
+    Uses an embedding layer,highway layer, followed by a convolutional, max-pooling and softmax layer.
     """
     def __init__(
       self, sequence_length, num_classes, vocab_size,
@@ -18,7 +17,6 @@ class hightway_CNN(object):
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
-
 
 
         # Embedding layer
@@ -36,27 +34,16 @@ class hightway_CNN(object):
             W_T = tf.Variable(tf.truncated_normal([embedding_size, embedding_size], stddev=0.1), name="weight_t")
             b = tf.Variable(tf.constant(0.1,shape=[embedding_size]),name = "bias")
             b_T = tf.Variable(tf.constant(0.1, shape=[embedding_size]), name="bias_T")
-            #T = tf.nn.relu(tf.nn.xw_plus_b(self.embedded_chars, W, b, name="non-linear-activation"))
             T = tf.nn.relu(tf.map_fn(lambda x:tf.nn.xw_plus_b(x, W, b, name="non-linear-activation"),self.embedded_chars))
-            print (T.shape)
-            #tf.transpose(W)
-            #t = tf.sigmoid(tf.nn.xw_plus_b(self.embedded_chars, W_T, b_T, name="transform_gate"))
+
             t = tf.sigmoid(
                 tf.map_fn(lambda x: tf.nn.xw_plus_b(x, W_T, b_T, name="transform_gate"), self.embedded_chars))
-            print (t.shape)
-            #carry gate
+
             c = tf.subtract(1.0, t, name="carry_gate")
             output = tf.add(tf.multiply(T,t),tf.multiply(self.embedded_chars,c))
             print ("output")
             print (output.shape)
             self.embedded_chars_expanded = tf.expand_dims(output, -1)
-        # A = tf.nn.softmax(
-        #     tf.map_fn(
-        #         lambda x: tf.matmul(self.w_s2, x),
-        #         tf.tanh(
-        #             tf.map_fn(
-        #                 lambda x: tf.matmul(self.w_s1, tf.transpose(x)),
-        #                 H))))
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
