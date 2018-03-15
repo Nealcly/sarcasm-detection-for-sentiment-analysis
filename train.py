@@ -35,7 +35,7 @@ tf.flags.DEFINE_string("dev_test_nonsarcasm", "./dataset/dev_test/dev_test_nonsa
 tf.flags.DEFINE_string("positive_data_file", "./dataset/train/train_sarcasm.txt", "Data source for the positive data.")
 tf.flags.DEFINE_string("negative_data_file", "./dataset/train/train_nonsarcasm.txt", "Data source for the negative data.")
 #Model
-tf.flags.DEFINE_string("model","cnn", "[highway_layer_cnn,cnn,gate_cnn,gate_cnn_nopadding,twolayerCNN,twolayerCNNnopooling,lstm,bilstm,attention-bilstm,muliti-layer-lstm,muliti-layer-Bilstm]")
+tf.flags.DEFINE_string("model","highway_layer_cnn", "[highway_layer_cnn,cnn,gate_cnn,gate_cnn_nopadding,twolayerCNN,twolayerCNNnopooling,lstm,bilstm,attention-bilstm,muliti-layer-lstm,muliti-layer-Bilstm]")
 #embedding
 tf.flags.DEFINE_string("embedding","word2vec", "word2vec,glove")
 # Model Hyperparameters
@@ -278,10 +278,11 @@ with tf.Graph().as_default():
         # Write vocabulary
         vocab_processor.save(os.path.join(out_dir, "vocab"))
 
-        #load word2vec
+        #load pre-train word2vec 300d
         print("Start Loading Embedding!")
         if FLAGS.embedding == "word2vec":
             word2vec = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+        #load pre-train glove 200d
         elif FLAGS.embedding == "glove":
             word2vec = KeyedVectors.load_word2vec_format('glove.twitter.27B.200d.bin', binary=True)
         print("Finish Loading Embedding!")
@@ -295,8 +296,8 @@ with tf.Graph().as_default():
         W = tf.placeholder(tf.float32, [None, None], name="pretrained_embeddings")
         set_x = cnn.W.assign(my_embedding_matrix)
         sess.run(set_x, feed_dict={W: my_embedding_matrix})
-
         print("Finish transfer")
+
         def train_step(x_batch, y_batch):
             """
             A single training step
