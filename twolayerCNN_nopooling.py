@@ -1,10 +1,15 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# @Time    : 1/18/2018 7:05 PM
+# @Author  : Leyang
 import tensorflow as tf
 import numpy as np
 
 
-class hightway_CNN(object):
+class twolayerCNN_no_pooling(object):
     """
-    Uses an embedding layer,highway layer, followed by a convolutional, max-pooling and softmax layer.
+    A CNN for text classification.
+    Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
     """
     def __init__(
       self, sequence_length, num_classes, vocab_size,
@@ -19,41 +24,29 @@ class hightway_CNN(object):
         l2_loss = tf.constant(0.0)
 
 
+
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
             self.W = tf.Variable(
-                tf.random_uniform([vocab_size, embedding_size], -0.25, 0.25),trainable=False,
+                tf.random_uniform([vocab_size, embedding_size], -0.25, 0.25),trainable=True,
                 name="W")
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
 
-            #self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
-
-        with tf.name_scope("highway"):
-            W = tf.Variable(tf.truncated_normal([embedding_size,embedding_size],stddev = 0.1),name = "weight")
-            W_T = tf.Variable(tf.truncated_normal([embedding_size, embedding_size], stddev=0.1), name="weight_t")
-            b = tf.Variable(tf.constant(0.1,shape=[embedding_size]),name = "bias")
-            b_T = tf.Variable(tf.constant(0.1, shape=[embedding_size]), name="bias_T")
-            T = tf.nn.relu(tf.map_fn(lambda x:tf.nn.xw_plus_b(x, W, b, name="non-linear-activation"),self.embedded_chars))
-
-            t = tf.sigmoid(
-                tf.map_fn(lambda x: tf.nn.xw_plus_b(x, W_T, b_T, name="transform_gate"), self.embedded_chars))
-
-            c = tf.subtract(1.0, t, name="carry_gate")
-            output = tf.add(tf.multiply(T,t),tf.multiply(self.embedded_chars,c))
-            print ("output")
-            print (output.shape)
-            self.embedded_chars_expanded = tf.expand_dims(output, -1)
+            self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
         for i, filter_size in enumerate(filter_sizes):
-
-            with tf.name_scope("conv-maxpool-%s" % filter_size):
-                # Convolution Layer
+            with tf.name_scope("conv-maxpool-1-%s" % filter_size):
+                # 1st Convolution Layer
+                conv_outputs = []
                 filter_shape = [filter_size, embedding_size, 1, num_filters]
                 W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
+                print (W.shape)
                 b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
+                print (self.embedded_chars_expanded.shape)
+                #(?, 49, 300, 1)
                 conv = tf.nn.conv2d(
                     self.embedded_chars_expanded,
                     W,
@@ -62,11 +55,38 @@ class hightway_CNN(object):
                     name="conv")
                 # Apply nonlinearity
                 h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+                print (h.shape)
+                # (?, 49, 1, 128)
+                conv_outputs.append(h)
+
+                conv_outputs = tf.concat(conv_outputs, 2)
+                print ("conv_outputs.shape",conv_outputs.shape)
+                conv_outputs = tf.reshape(conv_outputs, [-1, sequence_length - filter_size +1 ,num_filters , 1])
+                print("conv_outputs.shape",conv_outputs.shape)
+                #(?, 49, 1, 128)
+
+
+            with tf.name_scope("conv-maxpool-2-%s" % filter_size):
+                # 1st Convolution Layer
+
+                filter_shape = [filter_size, num_filters, 1, num_filters]
+                W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
+                b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
+                conv = tf.nn.conv2d(
+                    conv_outputs,
+                    W,
+                    strides=[1, 1, 1, 1],
+                    padding="VALID",
+                    name="conv")
+                # nonlinearity
+                h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+                print ("h.shape",h.shape)
+                print (filter_size)
+                print (sequence_length - 2 * filter_size + 2)
                 # Maxpooling over the outputs
                 pooled = tf.nn.max_pool(
-                #pooled = tf.nn.avg_pool(
                     h,
-                    ksize=[1, sequence_length - filter_size + 1, 1, 1],
+                    ksize=[1, sequence_length - 2 * filter_size + 2, 1, 1],
                     strides=[1, 1, 1, 1],
                     padding='VALID',
                     name="pool")
@@ -76,6 +96,10 @@ class hightway_CNN(object):
         num_filters_total = num_filters * len(filter_sizes)
         self.h_pool = tf.concat(pooled_outputs, 3)
         self.h_pool_flat = tf.reshape(self.h_pool, [-1, num_filters_total])
+
+
+
+
 
         # Add dropout
         with tf.name_scope("dropout"):
@@ -92,9 +116,6 @@ class hightway_CNN(object):
             l2_loss += tf.nn.l2_loss(b)
             self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
             self.predictions = tf.argmax(self.scores, 1, name="predictions")
-        #Highway layer
-        print (self.h_drop.shape)
-
 
         # CalculateMean cross-entropy loss
         with tf.name_scope("loss"):
