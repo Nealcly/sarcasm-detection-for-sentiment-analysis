@@ -60,9 +60,7 @@ class multi_layer_LSTM(object):
             # Get lstm cell output
             outputs, states = tf.contrib.rnn.static_rnn(mlstm_cell, x, dtype=tf.float32)
 
-
-
-            # Linear activation, using rnn inner loop last output
+            # Linear activation, using rnn inner loop mean output
             self.scores = tf.matmul(sum(outputs)/len(outputs), weights) + biases
             self.pred_ops = tf.nn.softmax(self.scores)
             self.predictions = tf.argmax(self.scores, 1, name="predictions")

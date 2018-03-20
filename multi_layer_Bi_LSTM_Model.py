@@ -78,8 +78,8 @@ class multi_layer_BiLSTM(object):
             outputs,_,_ = rnn.static_bidirectional_rnn(lstm_fw_cell,lstm_bw_cell, x, dtype=tf.float32)
 
 
-            # Linear activation, using rnn inner loop last output
-            self.scores = tf.matmul(outputs[-1], weights) + biases
+            # Linear activation, using rnn inner loop mean output
+            self.scores = tf.matmul(sum(outputs)/len(outputs), weights) + biases
             self.pred_ops = tf.nn.softmax(self.scores)
             self.predictions = tf.argmax(self.scores, 1, name="predictions")
 
