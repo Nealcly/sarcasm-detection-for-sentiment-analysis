@@ -1,0 +1,2 @@
+,,,,,,,dev_sarcasm,,,dev_nonsarcasm,,,test_sarcasm,,,test_nonsarcasm,,,,
+model,num_filters(cnn)/hidden(lstm),filter_size,dropout,batch_size,learning rate,l2,f1,precision,recall,f1,precision,recall,f1,precision,recall,f1,precision,recall,epoch,embedding
