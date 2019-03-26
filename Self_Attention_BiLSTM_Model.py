@@ -31,7 +31,7 @@ class self_attention_BiLSTM(object):
         ################
         with tf.device('/cpu:0'), tf.name_scope("Embedding"):
             self.W = tf.Variable(tf.random_uniform([vocab_size, input_embedding_size], -0.0001, 0.0001),trainable=True, name="W", dtype = tf.float32)
-            self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, sequence_length], name="embedding_placeholder")
+            self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, input_embedding_size], name="embedding_placeholder")
             self.embedding_init = self.W.assign(self.embedding_placeholder)
             self.train_input_embedding = tf.nn.embedding_lookup(self.W, self.input_x)
     
